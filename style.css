@@ -285,3 +285,95 @@ kbd {
 #restart-btn:hover {
   background: var(--restart-hover);
 }
+
+.overlay-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+#change-mode-btn {
+  background: transparent;
+  color: var(--restart-bg);
+  border: 1px solid var(--restart-bg);
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
+}
+
+#change-mode-btn:hover {
+  background: var(--restart-bg);
+  color: var(--restart-color);
+}
+
+/* ---- Desafío HUD ---- */
+.challenge-hud.hidden {
+  display: none;
+}
+
+.challenge-name {
+  font-size: 14px !important;
+  letter-spacing: 0.5px;
+}
+
+.challenge-progress {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  color: var(--controls-color);
+}
+
+/* ---- Selección de desafío ---- */
+.challenge-select-box {
+  max-width: 380px;
+  padding: 12px;
+}
+
+.challenge-select-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--title-color);
+  margin-bottom: 6px;
+}
+
+.challenge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.challenge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.challenge-item:hover {
+  border-color: var(--restart-bg);
+  background: var(--toggle-bg);
+}
+
+.challenge-item-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--value-color);
+}
+
+.challenge-item-desc {
+  font-size: 11px;
+  color: var(--controls-color);
+}
