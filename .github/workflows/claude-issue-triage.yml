@@ -1,0 +1,45 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Estás analizando el issue #${{ github.event.issue.number }} del repositorio ${{ github.repository }}.
+
+            1. Lee el issue completo con `gh issue view ${{ github.event.issue.number }} --repo ${{ github.repository }} --json title,body,labels,comments`.
+            2. Revisa el código del proyecto (game.js, index.html, style.css, CLAUDE.md) para entender la arquitectura y poder diagnosticar con contexto real.
+            3. Si el evento que disparó este workflow es "edited" y el issue ya tiene un comentario tuyo anterior (uno que empiece con el encabezado "## 🔍 Diagnóstico de Claude"), compara el contenido actual del issue contra ese análisis previo:
+               - Si el cambio es sustancial (el problema descrito cambió de forma relevante), procede a re-analizar y publica un nuevo comentario.
+               - Si el cambio es trivial (typos, formato, etc.) y no afecta el diagnóstico previo, no hagas nada más y termina.
+            4. Si es la primera vez que analizas este issue (evento "opened", o "edited" sin comentario previo tuyo), continúa con los pasos siguientes.
+            5. Asigna las etiquetas que apliquen usando `gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "..."`. SOLO puedes usar etiquetas de esta lista fija, exactamente como están escritas, y solo las que realmente apliquen: bug, documentation, enhancement, help wanted, good first issue, invalid, question, wontfix, duplicate, accessibility. No crees etiquetas nuevas. No quites etiquetas existentes que sigan aplicando.
+            6. Publica un comentario en español con `gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body "..."` que empiece exactamente con el encabezado `## 🔍 Diagnóstico de Claude` y tenga esta estructura:
+               - **Resumen del problema**
+               - **Causa probable / hipótesis**
+               - **Áreas o archivos afectados** (referencia archivos y, cuando puedas identificarlo, funciones o rangos de líneas relevantes de game.js/index.html/style.css)
+               - **Posible enfoque de solución** (a alto nivel, sin implementar código — es para que el equipo lo use como base al escribir la solución)
+               - **Etiquetas asignadas**
+
+            No implementes código ni abras pull requests. Tu única salida es: labels en el issue y un comentario de diagnóstico.
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh issue list:*)"'
