@@ -273,6 +273,7 @@ function loop(ts) {
       lockPiece();
     }
   }
+  if (gameOver) return;
   draw();
   animId = requestAnimationFrame(loop);
 }
