@@ -35,6 +35,12 @@
           <span class="value" id="level">1</span>
         </div>
 
+        <div class="panel-section challenge-hud hidden" id="challenge-hud">
+          <span class="label">DESAFÍO</span>
+          <span class="value challenge-name" id="challenge-name"></span>
+          <span class="challenge-progress" id="challenge-progress"></span>
+        </div>
+
         <div class="panel-section">
           <span class="label">NEXT</span>
           <canvas id="next-canvas" width="120" height="120"></canvas>
@@ -57,7 +63,17 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+        <div class="overlay-actions">
+          <button id="restart-btn">Reiniciar</button>
+          <button id="change-mode-btn">Elegir desafío</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="challenge-select" class="overlay">
+      <div class="overlay-box challenge-select-box">
+        <p class="challenge-select-title">MODO DESAFÍO</p>
+        <div class="challenge-list" id="challenge-list"></div>
       </div>
     </div>
   </div>

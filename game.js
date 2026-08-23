@@ -14,7 +14,10 @@ const COLORS = [
   '#5c9dff', // J - pale blue
   '#ffb74d', // L - orange
   '#b0bec5', // NUT - gris metálico
+  '#707070', // basura de desafío
 ];
+
+const GARBAGE_COLOR = 9;
 
 const PIECES = [
   null,
@@ -29,6 +32,44 @@ const PIECES = [
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+
+const CHALLENGES = [
+  {
+    id: 'lines-time',
+    name: 'Cuenta atrás',
+    desc: 'Limpia 40 líneas antes de que se acabe el tiempo (2 minutos).',
+    goalLines: 40,
+    timeLimit: 120000,
+  },
+  {
+    id: 'garbage',
+    name: 'Marea de basura',
+    desc: 'Cada 10s sube una fila de basura desde abajo. Aguanta 2 minutos sin que el stack llegue arriba.',
+    garbageInterval: 10000,
+    survivalGoal: 120000,
+  },
+  {
+    id: 'preset',
+    name: 'Terreno minado',
+    desc: 'El tablero arranca con bloques ya colocados. Limpia 10 líneas para superar el desafío.',
+    goalLines: 10,
+    preset: true,
+  },
+  {
+    id: 'invisible',
+    name: 'Piezas fantasma',
+    desc: 'La pieza se vuelve invisible justo antes de tocar el suelo. Limpia 15 líneas para ganar.',
+    goalLines: 15,
+    invisibleNearGround: true,
+  },
+  {
+    id: 'reverse-rotation',
+    name: 'Rotación inversa',
+    desc: 'A partir del nivel 5 la rotación se invierte. Alcanza el nivel 8 para ganar.',
+    goalLevel: 8,
+    reverseRotationLevel: 5,
+  },
+];
 
 const POWERUP_INTERVAL = 10;
 const POWERUPS = [
@@ -50,10 +91,17 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const changeModeBtn = document.getElementById('change-mode-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const challengeSelect = document.getElementById('challenge-select');
+const challengeListEl = document.getElementById('challenge-list');
+const challengeHud = document.getElementById('challenge-hud');
+const challengeNameEl = document.getElementById('challenge-name');
+const challengeProgressEl = document.getElementById('challenge-progress');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let pendingPowerUp, freezeUntil;
+let activeChallenge, challengeDone, challengeTimeLeft, challengeElapsed, challengeGarbageAccum;
 let gridColor = '#22222e';
 
 const THEME_KEY = 'tetris-theme';
@@ -113,8 +161,18 @@ function rotateCW(shape) {
   return result;
 }
 
+function rotateCCW(shape) {
+  const rows = shape.length, cols = shape[0].length;
+  const result = Array.from({ length: cols }, () => new Array(rows).fill(0));
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      result[cols - 1 - c][r] = shape[r][c];
+  return result;
+}
+
 function tryRotate() {
-  const rotated = rotateCW(current.shape);
+  const reversed = activeChallenge && activeChallenge.reverseRotationLevel && level >= activeChallenge.reverseRotationLevel;
+  const rotated = reversed ? rotateCCW(current.shape) : rotateCW(current.shape);
   const kicks = [0, -1, 1, -2, 2];
   for (const kick of kicks) {
     if (!collide(rotated, current.x + kick, current.y)) {
@@ -152,6 +210,16 @@ function clearLines() {
       pendingPowerUp = true;
     }
     updateHUD();
+    checkChallengeGoals();
+  }
+}
+
+function checkChallengeGoals() {
+  if (!activeChallenge || gameOver) return;
+  if (activeChallenge.goalLines && lines >= activeChallenge.goalLines) {
+    completeChallenge(true);
+  } else if (activeChallenge.goalLevel && level >= activeChallenge.goalLevel) {
+    completeChallenge(true);
   }
 }
 
@@ -267,6 +335,100 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  updateChallengeHUD();
+}
+
+function formatTime(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function challengeProgressText() {
+  switch (activeChallenge.id) {
+    case 'lines-time':
+      return `Líneas ${lines}/${activeChallenge.goalLines} · ${formatTime(challengeTimeLeft)}`;
+    case 'garbage':
+      return `Sobrevive ${formatTime(challengeElapsed)}/${formatTime(activeChallenge.survivalGoal)}`;
+    case 'preset':
+    case 'invisible':
+      return `Líneas ${lines}/${activeChallenge.goalLines}`;
+    case 'reverse-rotation':
+      return `Nivel ${level}/${activeChallenge.goalLevel}${level >= activeChallenge.reverseRotationLevel ? ' · ¡invertida!' : ''}`;
+    default:
+      return '';
+  }
+}
+
+function updateChallengeHUD() {
+  if (!activeChallenge) {
+    challengeHud.classList.add('hidden');
+    return;
+  }
+  challengeHud.classList.remove('hidden');
+  challengeNameEl.textContent = activeChallenge.name;
+  challengeProgressEl.textContent = challengeProgressText();
+}
+
+function insertGarbageRow() {
+  const hole = Math.floor(Math.random() * COLS);
+  const overflow = board[0].some(v => v !== 0);
+  board.shift();
+  const row = new Array(COLS).fill(GARBAGE_COLOR);
+  row[hole] = 0;
+  board.push(row);
+  if (overflow || collide(current.shape, current.x, current.y)) {
+    endGame();
+  }
+}
+
+function tickChallenge(dt) {
+  if (!activeChallenge || gameOver) return;
+  if (activeChallenge.timeLimit) {
+    challengeTimeLeft -= dt;
+    if (challengeTimeLeft <= 0) {
+      challengeTimeLeft = 0;
+      completeChallenge(lines >= activeChallenge.goalLines);
+    }
+  }
+  if (activeChallenge.garbageInterval) {
+    challengeElapsed += dt;
+    challengeGarbageAccum += dt;
+    if (challengeGarbageAccum >= activeChallenge.garbageInterval) {
+      challengeGarbageAccum -= activeChallenge.garbageInterval;
+      insertGarbageRow();
+    }
+    if (!gameOver && activeChallenge.survivalGoal && challengeElapsed >= activeChallenge.survivalGoal) {
+      completeChallenge(true);
+    }
+  }
+  updateChallengeHUD();
+}
+
+function applyPresetBoard() {
+  const pattern = [
+    [0,0,1,1,0,0,0,1,1,0],
+    [0,1,1,0,0,0,0,1,1,0],
+    [1,1,0,0,1,1,0,0,1,1],
+    [1,0,0,0,1,1,0,0,0,1],
+    [0,0,1,1,0,0,1,1,0,0],
+    [0,1,1,0,0,0,0,1,1,0],
+  ];
+  const startRow = ROWS - pattern.length;
+  for (let r = 0; r < pattern.length; r++)
+    for (let c = 0; c < COLS; c++)
+      if (pattern[r][c]) board[startRow + r][c] = ((r + c) % 7) + 1;
+}
+
+function completeChallenge(success) {
+  if (challengeDone) return;
+  challengeDone = true;
+  gameOver = true;
+  cancelAnimationFrame(animId);
+  overlayTitle.textContent = success ? '¡DESAFÍO SUPERADO!' : 'DESAFÍO FALLIDO';
+  overlayScore.textContent = `Puntuación: ${score.toLocaleString()} · ${challengeProgressText()}`;
+  overlay.classList.remove('hidden');
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -336,10 +498,18 @@ function draw() {
 
   // ghost
   const gy = ghostY();
-  drawPieceCells(ctx, current, current.x, gy, BLOCK, 0.2);
+  const invisibleChallenge = activeChallenge && activeChallenge.invisibleNearGround;
+  if (!invisibleChallenge) {
+    drawPieceCells(ctx, current, current.x, gy, BLOCK, 0.2);
+  }
 
   // current piece
-  drawPieceCells(ctx, current, current.x, current.y, BLOCK);
+  const nearGround = collide(current.shape, current.x, current.y + 1);
+  if (invisibleChallenge && nearGround) {
+    drawPieceCells(ctx, current, current.x, current.y, BLOCK, 0.05);
+  } else {
+    drawPieceCells(ctx, current, current.x, current.y, BLOCK);
+  }
 
   // freeze indicator
   if (freezeUntil && performance.now() < freezeUntil) {
@@ -363,6 +533,10 @@ function drawNext() {
 }
 
 function endGame() {
+  if (activeChallenge) {
+    completeChallenge(false);
+    return;
+  }
   gameOver = true;
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
@@ -398,13 +572,20 @@ function loop(ts) {
       lockPiece();
     }
   }
+  tickChallenge(dt);
   if (gameOver) return;
   draw();
   animId = requestAnimationFrame(loop);
 }
 
-function init() {
+function init(challenge) {
+  activeChallenge = challenge || null;
+  challengeDone = false;
+  challengeTimeLeft = activeChallenge && activeChallenge.timeLimit ? activeChallenge.timeLimit : 0;
+  challengeElapsed = 0;
+  challengeGarbageAccum = 0;
   board = createBoard();
+  if (activeChallenge && activeChallenge.preset) applyPresetBoard();
   score = 0;
   lines = 0;
   level = 1;
@@ -423,7 +604,28 @@ function init() {
   animId = requestAnimationFrame(loop);
 }
 
+function renderChallengeList() {
+  challengeListEl.innerHTML = '';
+  const options = [
+    { id: 'classic', name: 'Modo clásico', desc: 'Tetris tradicional, sin objetivos especiales.' },
+    ...CHALLENGES,
+  ];
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'challenge-item';
+    btn.innerHTML = `<span class="challenge-item-name">${opt.name}</span><span class="challenge-item-desc">${opt.desc}</span>`;
+    btn.addEventListener('click', () => startChallenge(opt.id === 'classic' ? null : opt));
+    challengeListEl.appendChild(btn);
+  });
+}
+
+function startChallenge(challenge) {
+  challengeSelect.classList.add('hidden');
+  init(challenge);
+}
+
 document.addEventListener('keydown', e => {
+  if (!current) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -448,7 +650,13 @@ document.addEventListener('keydown', e => {
   updateHUD();
 });
 
-restartBtn.addEventListener('click', init);
+restartBtn.addEventListener('click', () => init(activeChallenge));
+
+changeModeBtn.addEventListener('click', () => {
+  cancelAnimationFrame(animId);
+  overlay.classList.add('hidden');
+  challengeSelect.classList.remove('hidden');
+});
 
 initTheme();
-init();
+renderChallengeList();
