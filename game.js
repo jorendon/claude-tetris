@@ -43,6 +43,9 @@ const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
+const holdCanvas = document.getElementById('hold-canvas');
+const holdCtx = holdCanvas.getContext('2d');
+const holdSection = document.getElementById('hold-section');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
@@ -54,6 +57,7 @@ const themeToggle = document.getElementById('theme-toggle');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let pendingPowerUp, freezeUntil;
+let hold, holdLocked;
 let gridColor = '#22222e';
 
 const THEME_KEY = 'tetris-theme';
@@ -184,6 +188,8 @@ function lockPiece() {
     applyPowerUp(current.powerUp, current);
   }
   clearLines();
+  holdLocked = false;
+  updateHoldUI();
   spawn();
 }
 
@@ -195,6 +201,32 @@ function spawn() {
     endGame();
   }
   drawNext();
+}
+
+function resetSpawnPosition(piece) {
+  piece.x = Math.floor(COLS / 2) - Math.floor(piece.shape[0].length / 2);
+  piece.y = 0;
+}
+
+function holdCurrentPiece() {
+  if (holdLocked) return;
+  const stored = { type: current.type, shape: PIECES[current.type].map(row => [...row]) };
+  if (current.powerUp) stored.powerUp = current.powerUp;
+  if (hold) {
+    const swapped = hold;
+    hold = stored;
+    current = swapped;
+    resetSpawnPosition(current);
+    if (collide(current.shape, current.x, current.y)) {
+      endGame();
+    }
+  } else {
+    hold = stored;
+    spawn();
+  }
+  holdLocked = true;
+  drawHold();
+  updateHoldUI();
 }
 
 function applyPowerUp(effect, piece) {
@@ -362,6 +394,20 @@ function drawNext() {
   drawPieceCells(nextCtx, next, offX, offY, NB);
 }
 
+function drawHold() {
+  const HB = 30;
+  holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+  if (!hold) return;
+  const shape = hold.shape;
+  const offX = Math.floor((4 - shape[0].length) / 2);
+  const offY = Math.floor((4 - shape.length) / 2);
+  drawPieceCells(holdCtx, hold, offX, offY, HB);
+}
+
+function updateHoldUI() {
+  holdSection.classList.toggle('locked', holdLocked);
+}
+
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
@@ -414,9 +460,13 @@ function init() {
   dropAccum = 0;
   pendingPowerUp = false;
   freezeUntil = null;
+  hold = null;
+  holdLocked = false;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
+  drawHold();
+  updateHoldUI();
   updateHUD();
   overlay.classList.add('hidden');
   cancelAnimationFrame(animId);
@@ -443,6 +493,11 @@ document.addEventListener('keydown', e => {
     case 'Space':
       e.preventDefault();
       hardDrop();
+      break;
+    case 'KeyC':
+    case 'ShiftLeft':
+    case 'ShiftRight':
+      holdCurrentPiece();
       break;
   }
   updateHUD();

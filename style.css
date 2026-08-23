@@ -184,11 +184,21 @@ body {
   letter-spacing: 1px;
 }
 
-#next-canvas {
+#next-canvas,
+#hold-canvas {
   display: block;
   border: 1px solid var(--board-border);
   background: var(--board-bg);
   border-radius: 4px;
+}
+
+#hold-section {
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+#hold-section.locked {
+  opacity: 0.35;
+  filter: grayscale(1);
 }
 
 /* ---- Controles ---- */
