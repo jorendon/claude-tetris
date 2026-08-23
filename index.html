@@ -19,9 +19,7 @@
       </label>
     </div>
     <div class="game-container">
-      <canvas id="board" width="300" height="600"></canvas>
-
-      <aside class="panel">
+      <aside class="panel panel-left">
         <div class="panel-section">
           <span class="label">SCORE</span>
           <span class="value" id="score">0</span>
@@ -43,7 +41,11 @@
           <span class="label">HOLD</span>
           <canvas id="hold-canvas" width="120" height="120"></canvas>
         </div>
+      </aside>
 
+      <canvas id="board" width="300" height="600"></canvas>
+
+      <aside class="panel panel-right">
         <div class="panel-section challenge-hud hidden" id="challenge-hud">
           <span class="label">DESAFÍO</span>
           <span class="value challenge-name" id="challenge-name"></span>
