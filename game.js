@@ -49,6 +49,7 @@ const holdSection = document.getElementById('hold-section');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
+const comboEl = document.getElementById('combo');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
@@ -58,7 +59,11 @@ const themeToggle = document.getElementById('theme-toggle');
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let pendingPowerUp, freezeUntil;
 let hold, holdLocked;
+let combo, b2bActive, lastMoveWasRotation, effects;
+let audioCtx;
 let gridColor = '#22222e';
+
+const EFFECT_DURATION = 1000;
 
 const THEME_KEY = 'tetris-theme';
 
@@ -124,9 +129,26 @@ function tryRotate() {
     if (!collide(rotated, current.x + kick, current.y)) {
       current.shape = rotated;
       current.x += kick;
+      lastMoveWasRotation = true;
       return;
     }
   }
+}
+
+function isTSpin(piece) {
+  if (piece.type !== 3 || !lastMoveWasRotation) return false;
+  const corners = [
+    [piece.x, piece.y],
+    [piece.x + 2, piece.y],
+    [piece.x, piece.y + 2],
+    [piece.x + 2, piece.y + 2],
+  ];
+  let occupied = 0;
+  for (const [x, y] of corners) {
+    if (x < 0 || x >= COLS || y >= ROWS) occupied++;
+    else if (y >= 0 && board[y][x]) occupied++;
+  }
+  return occupied >= 3;
 }
 
 function merge() {
@@ -136,7 +158,7 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
-function clearLines() {
+function clearLines(tSpin) {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
     if (board[r].every(v => v !== 0)) {
@@ -146,17 +168,48 @@ function clearLines() {
       r++;
     }
   }
+
+  if (tSpin) {
+    score += 400 * level + (cleared ? 200 * level * cleared : 0);
+    showEffect('T-SPIN!', '#ba68c8');
+    playSound('tspin');
+  }
+
   if (cleared) {
+    combo++;
     const prevLines = lines;
     lines += cleared;
-    score += (LINE_SCORES[cleared] || 0) * level;
+    let lineScore = (LINE_SCORES[cleared] || 0) * level * combo;
+    const isTetris = cleared === 4;
+    let b2b = false;
+    if (isTetris && b2bActive) {
+      lineScore = Math.round(lineScore * 1.5);
+      b2b = true;
+    }
+    b2bActive = isTetris;
+    score += lineScore;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     if (Math.floor(lines / POWERUP_INTERVAL) > Math.floor(prevLines / POWERUP_INTERVAL)) {
       pendingPowerUp = true;
     }
-    updateHUD();
+    if (combo >= 2) {
+      showEffect(`COMBO x${combo}`, '#ffee58');
+      playSound('combo', combo);
+    }
+    if (isTetris) {
+      showEffect(b2b ? 'B2B TETRIS!' : 'TETRIS!', '#4dd0e1');
+      playSound(b2b ? 'b2b' : 'tetris');
+    }
+    if (board.every(row => row.every(v => v === 0))) {
+      score += 3000 * level;
+      showEffect('PERFECT CLEAR!', '#fff176');
+      playSound('perfect');
+    }
+  } else {
+    combo = 0;
   }
+  updateHUD();
 }
 
 function ghostY() {
@@ -175,6 +228,7 @@ function hardDrop() {
 function softDrop() {
   if (!collide(current.shape, current.x, current.y + 1)) {
     current.y++;
+    lastMoveWasRotation = false;
     score += 1;
     updateHUD();
   } else {
@@ -183,11 +237,12 @@ function softDrop() {
 }
 
 function lockPiece() {
+  const tSpin = isTSpin(current);
   merge();
   if (current.powerUp) {
     applyPowerUp(current.powerUp, current);
   }
-  clearLines();
+  clearLines(tSpin);
   holdLocked = false;
   updateHoldUI();
   spawn();
@@ -197,6 +252,7 @@ function spawn() {
   current = next;
   next = pendingPowerUp ? randomPowerUpPiece() : randomPiece();
   pendingPowerUp = false;
+  lastMoveWasRotation = false;
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -299,6 +355,36 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  comboEl.textContent = combo >= 2 ? `x${combo}` : '—';
+}
+
+function showEffect(text, color) {
+  effects.push({ text, color, start: performance.now() });
+}
+
+function playSound(kind, arg) {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const now = audioCtx.currentTime;
+  const tones = {
+    combo: [440 + (arg || 2) * 60],
+    tspin: [523.25, 659.25],
+    tetris: [392, 523.25, 659.25],
+    b2b: [523.25, 659.25, 783.99],
+    perfect: [523.25, 659.25, 783.99, 1046.5],
+  };
+  const freqs = tones[kind] || [440];
+  freqs.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = kind === 'tspin' ? 'triangle' : 'square';
+    osc.frequency.value = freq;
+    const start = now + i * 0.09;
+    gain.gain.setValueAtTime(0.15, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(start);
+    osc.stop(start + 0.16);
+  });
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -383,6 +469,23 @@ function draw() {
     ctx.textBaseline = 'middle';
     ctx.fillText('❄️ CONGELADO', canvas.width / 2, 13);
   }
+
+  drawEffects();
+}
+
+function drawEffects() {
+  const now = performance.now();
+  effects = effects.filter(e => now - e.start < EFFECT_DURATION);
+  effects.forEach((e, i) => {
+    const t = (now - e.start) / EFFECT_DURATION;
+    ctx.globalAlpha = 1 - t;
+    ctx.fillStyle = e.color;
+    ctx.font = "bold 22px 'Courier New', monospace";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(e.text, canvas.width / 2, canvas.height / 2 - 20 * t + i * 26);
+    ctx.globalAlpha = 1;
+  });
 }
 
 function drawNext() {
@@ -440,6 +543,7 @@ function loop(ts) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
       current.y++;
+      lastMoveWasRotation = false;
     } else {
       lockPiece();
     }
@@ -462,6 +566,10 @@ function init() {
   freezeUntil = null;
   hold = null;
   holdLocked = false;
+  combo = 0;
+  b2bActive = false;
+  lastMoveWasRotation = false;
+  effects = [];
   lastTime = performance.now();
   next = randomPiece();
   spawn();
@@ -478,10 +586,16 @@ document.addEventListener('keydown', e => {
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
-      if (!collide(current.shape, current.x - 1, current.y)) current.x--;
+      if (!collide(current.shape, current.x - 1, current.y)) {
+        current.x--;
+        lastMoveWasRotation = false;
+      }
       break;
     case 'ArrowRight':
-      if (!collide(current.shape, current.x + 1, current.y)) current.x++;
+      if (!collide(current.shape, current.x + 1, current.y)) {
+        current.x++;
+        lastMoveWasRotation = false;
+      }
       break;
     case 'ArrowDown':
       softDrop();
