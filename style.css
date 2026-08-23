@@ -184,6 +184,10 @@ body {
   letter-spacing: 1px;
 }
 
+.combo-value {
+  color: #ffee58;
+}
+
 #next-canvas {
   display: block;
   border: 1px solid var(--board-border);
