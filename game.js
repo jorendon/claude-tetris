@@ -30,6 +30,12 @@ const PIECES = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+const ENERGY_MAX = 100;
+const ENERGY_GAIN = [0, 10, 25, 45, 70];
+const QUEUE_SIZE = 6;
+const SLOW_FACTOR = 2.5;
+const PREVIEW_DURATION = 8000;
+
 const POWERUP_INTERVAL = 10;
 const POWERUPS = [
   { key: 'bomb', icon: '💣', color: '#ff5252', label: 'Bomba' },
@@ -43,6 +49,8 @@ const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
+const holdCanvas = document.getElementById('hold-canvas');
+const holdCtx = holdCanvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
@@ -51,9 +59,14 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const energyFillEl = document.getElementById('energy-fill');
+const abilityOverlay = document.getElementById('ability-overlay');
+const extendedPreviewSection = document.getElementById('extended-preview-section');
+const extendedPreviewList = document.getElementById('extended-preview-list');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let pendingPowerUp, freezeUntil;
+let queue, energy, abilityMenuOpen, holdPiece, lastLock, previewUntil, slowUntil, audioCtx;
 let gridColor = '#22222e';
 
 const THEME_KEY = 'tetris-theme';
@@ -151,6 +164,9 @@ function clearLines() {
     if (Math.floor(lines / POWERUP_INTERVAL) > Math.floor(prevLines / POWERUP_INTERVAL)) {
       pendingPowerUp = true;
     }
+    const wasFull = energy >= ENERGY_MAX;
+    energy = Math.min(ENERGY_MAX, energy + (ENERGY_GAIN[cleared] || 0));
+    if (!wasFull && energy >= ENERGY_MAX) playEnergyFullSound();
     updateHUD();
   }
 }
@@ -179,6 +195,13 @@ function softDrop() {
 }
 
 function lockPiece() {
+  lastLock = {
+    board: board.map(row => row.slice()),
+    score, lines, level, dropInterval,
+    piece: { type: current.type, shape: current.shape.map(r => r.slice()), x: current.x, y: current.y, powerUp: current.powerUp },
+    queue: queue.map(p => ({ type: p.type, shape: p.shape.map(r => r.slice()), x: p.x, y: p.y, powerUp: p.powerUp })),
+    holdPiece: holdPiece ? { type: holdPiece.type, shape: holdPiece.shape.map(r => r.slice()), powerUp: holdPiece.powerUp } : null,
+  };
   merge();
   if (current.powerUp) {
     applyPowerUp(current.powerUp, current);
@@ -188,13 +211,67 @@ function lockPiece() {
 }
 
 function spawn() {
-  current = next;
-  next = pendingPowerUp ? randomPowerUpPiece() : randomPiece();
+  current = queue.shift();
+  const piece = pendingPowerUp ? randomPowerUpPiece() : randomPiece();
   pendingPowerUp = false;
+  queue.push(piece);
+  next = queue[0];
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
   drawNext();
+}
+
+function undoLastLock() {
+  if (!lastLock) return;
+  board = lastLock.board.map(row => row.slice());
+  score = lastLock.score;
+  lines = lastLock.lines;
+  level = lastLock.level;
+  dropInterval = lastLock.dropInterval;
+  current = { type: lastLock.piece.type, shape: lastLock.piece.shape.map(r => r.slice()), x: lastLock.piece.x, y: lastLock.piece.y, powerUp: lastLock.piece.powerUp };
+  queue = lastLock.queue.map(p => ({ type: p.type, shape: p.shape.map(r => r.slice()), x: p.x, y: p.y, powerUp: p.powerUp }));
+  holdPiece = lastLock.holdPiece ? { type: lastLock.holdPiece.type, shape: lastLock.holdPiece.shape.map(r => r.slice()), powerUp: lastLock.holdPiece.powerUp } : null;
+  next = queue[0];
+  lastLock = null;
+  drawNext();
+}
+
+function swapCurrentPiece() {
+  const replacement = randomPiece();
+  replacement.x = current.x;
+  replacement.y = current.y;
+  if (collide(replacement.shape, replacement.x, replacement.y)) {
+    replacement.x = Math.floor(COLS / 2) - Math.floor(replacement.shape[0].length / 2);
+    replacement.y = 0;
+  }
+  current = replacement;
+}
+
+function useHold() {
+  if (!holdPiece) {
+    holdPiece = { type: current.type, shape: PIECES[current.type].map(r => r.slice()), powerUp: current.powerUp };
+    current = queue.shift();
+    queue.push(pendingPowerUp ? randomPowerUpPiece() : randomPiece());
+    pendingPowerUp = false;
+    next = queue[0];
+  } else {
+    const stored = holdPiece;
+    holdPiece = { type: current.type, shape: PIECES[current.type].map(r => r.slice()), powerUp: current.powerUp };
+    const shape = PIECES[stored.type].map(r => r.slice());
+    current = { type: stored.type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0, powerUp: stored.powerUp };
+  }
+  if (collide(current.shape, current.x, current.y)) endGame();
+  drawNext();
+  drawHold();
+}
+
+function activateExtendedPreview() {
+  previewUntil = performance.now() + PREVIEW_DURATION;
+}
+
+function activateSlow() {
+  slowUntil = performance.now() + 10000;
 }
 
 function applyPowerUp(effect, piece) {
@@ -267,6 +344,29 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  energyFillEl.style.width = Math.min(100, (energy / ENERGY_MAX) * 100) + '%';
+  energyFillEl.classList.toggle('full', energy >= ENERGY_MAX);
+  drawHold();
+}
+
+function playTone(freq, duration, type, delay) {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const t0 = audioCtx.currentTime + (delay || 0);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, t0);
+  gain.gain.setValueAtTime(0.15, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration);
+}
+
+function playEnergyFullSound() {
+  playTone(660, 0.12, 'square', 0);
+  playTone(880, 0.15, 'square', 0.12);
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -351,6 +451,17 @@ function draw() {
     ctx.textBaseline = 'middle';
     ctx.fillText('❄️ CONGELADO', canvas.width / 2, 13);
   }
+
+  // slow-time indicator
+  if (slowUntil && performance.now() < slowUntil) {
+    ctx.fillStyle = 'rgba(10, 10, 20, 0.6)';
+    ctx.fillRect(0, canvas.height - 26, canvas.width, 26);
+    ctx.fillStyle = '#7aa2f7';
+    ctx.font = "14px 'Courier New', monospace";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🐢 LENTO', canvas.width / 2, canvas.height - 13);
+  }
 }
 
 function drawNext() {
@@ -360,6 +471,52 @@ function drawNext() {
   const offX = Math.floor((4 - shape[0].length) / 2);
   const offY = Math.floor((4 - shape.length) / 2);
   drawPieceCells(nextCtx, next, offX, offY, NB);
+}
+
+function drawHold() {
+  const NB = 30;
+  holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+  if (!holdPiece) return;
+  const shape = holdPiece.shape;
+  const offX = Math.floor((4 - shape[0].length) / 2);
+  const offY = Math.floor((4 - shape.length) / 2);
+  drawPieceCells(holdCtx, holdPiece, offX, offY, NB);
+}
+
+function updateExtendedPreviewUI() {
+  const active = previewUntil && performance.now() < previewUntil;
+  extendedPreviewSection.hidden = !active;
+  if (!active) return;
+  extendedPreviewList.innerHTML = '';
+  queue.slice(0, 5).forEach(p => {
+    const chip = document.createElement('span');
+    chip.className = 'preview-chip';
+    chip.style.background = COLORS[p.type];
+    chip.textContent = p.powerUp ? p.powerUp.icon : '';
+    extendedPreviewList.appendChild(chip);
+  });
+}
+
+function openAbilityMenu() {
+  abilityMenuOpen = true;
+  cancelAnimationFrame(animId);
+  abilityOverlay.classList.remove('hidden');
+}
+
+function selectAbility(n) {
+  switch (n) {
+    case 1: activateExtendedPreview(); break;
+    case 2: swapCurrentPiece(); break;
+    case 3: activateSlow(); break;
+    case 4: undoLastLock(); break;
+    case 5: useHold(); break;
+  }
+  energy = 0;
+  abilityMenuOpen = false;
+  abilityOverlay.classList.add('hidden');
+  updateHUD();
+  lastTime = performance.now();
+  loop(lastTime);
 }
 
 function endGame() {
@@ -390,7 +547,8 @@ function loop(ts) {
   if (!(freezeUntil && ts < freezeUntil)) {
     dropAccum += dt;
   }
-  if (dropAccum >= dropInterval) {
+  const effectiveInterval = (slowUntil && ts < slowUntil) ? dropInterval * SLOW_FACTOR : dropInterval;
+  if (dropAccum >= effectiveInterval) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
       current.y++;
@@ -399,6 +557,7 @@ function loop(ts) {
     }
   }
   if (gameOver) return;
+  updateExtendedPreviewUI();
   draw();
   animId = requestAnimationFrame(loop);
 }
@@ -414,18 +573,36 @@ function init() {
   dropAccum = 0;
   pendingPowerUp = false;
   freezeUntil = null;
+  energy = 0;
+  abilityMenuOpen = false;
+  holdPiece = null;
+  lastLock = null;
+  previewUntil = 0;
+  slowUntil = 0;
   lastTime = performance.now();
-  next = randomPiece();
+  queue = Array.from({ length: QUEUE_SIZE }, () => randomPiece());
   spawn();
   updateHUD();
+  drawHold();
   overlay.classList.add('hidden');
+  abilityOverlay.classList.add('hidden');
+  extendedPreviewSection.hidden = true;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
+  if (abilityMenuOpen) {
+    const map = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5 };
+    if (map[e.code]) selectAbility(map[e.code]);
+    return;
+  }
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
+  if (e.code === 'KeyE') {
+    if (energy >= ENERGY_MAX) openAbilityMenu();
+    return;
+  }
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -446,6 +623,12 @@ document.addEventListener('keydown', e => {
       break;
   }
   updateHUD();
+});
+
+document.querySelectorAll('.ability-list li').forEach(li => {
+  li.addEventListener('click', () => {
+    if (abilityMenuOpen) selectAbility(Number(li.dataset.ability));
+  });
 });
 
 restartBtn.addEventListener('click', init);

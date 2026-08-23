@@ -37,7 +37,24 @@
 
         <div class="panel-section">
           <span class="label">NEXT</span>
-          <canvas id="next-canvas" width="120" height="120"></canvas>
+          <canvas id="next-canvas" class="side-canvas" width="120" height="120"></canvas>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">RESERVA</span>
+          <canvas id="hold-canvas" class="side-canvas" width="120" height="120"></canvas>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">ENERGÍA</span>
+          <div class="energy-bar">
+            <div class="energy-fill" id="energy-fill"></div>
+          </div>
+        </div>
+
+        <div class="panel-section" id="extended-preview-section" hidden>
+          <span class="label">SIGUIENTES</span>
+          <div id="extended-preview-list" class="preview-list"></div>
         </div>
 
         <div class="panel-section controls">
@@ -47,6 +64,7 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
+            <li><kbd>E</kbd> habilidad</li>
             <li><kbd>P</kbd> pausa</li>
           </ul>
         </div>
@@ -58,6 +76,19 @@
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="ability-overlay" class="overlay hidden">
+      <div class="overlay-box ability-box">
+        <p class="ability-title">¡ENERGÍA LISTA! Elige una habilidad</p>
+        <ul class="ability-list">
+          <li data-ability="1"><kbd>1</kbd> Ver siguientes 5 piezas</li>
+          <li data-ability="2"><kbd>2</kbd> Intercambiar pieza actual</li>
+          <li data-ability="3"><kbd>3</kbd> Ralentizar tiempo (10s)</li>
+          <li data-ability="4"><kbd>4</kbd> Deshacer última colocación</li>
+          <li data-ability="5"><kbd>5</kbd> Reservar pieza (hold)</li>
+        </ul>
       </div>
     </div>
   </div>

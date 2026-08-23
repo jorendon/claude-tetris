@@ -184,11 +184,54 @@ body {
   letter-spacing: 1px;
 }
 
-#next-canvas {
+.side-canvas {
   display: block;
   border: 1px solid var(--board-border);
   background: var(--board-bg);
   border-radius: 4px;
+}
+
+/* ---- Barra de energía ---- */
+.energy-bar {
+  width: 100%;
+  height: 14px;
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.energy-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--title-color), #4dd0e1);
+  transition: width 0.2s ease-out;
+}
+
+.energy-fill.full {
+  animation: energy-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes energy-pulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.7); box-shadow: 0 0 12px #ffd54f; }
+}
+
+/* ---- Preview extendido ---- */
+.preview-list {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.preview-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
 }
 
 /* ---- Controles ---- */
@@ -270,4 +313,44 @@ kbd {
 
 #restart-btn:hover {
   background: var(--restart-hover);
+}
+
+/* ---- Menú de habilidades ---- */
+.ability-box {
+  max-width: 320px;
+  padding: 0 24px;
+}
+
+.ability-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--overlay-score-color);
+}
+
+.ability-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.ability-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(122, 162, 247, 0.08);
+  color: var(--text-color);
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.ability-list li:hover {
+  background: rgba(122, 162, 247, 0.22);
 }
