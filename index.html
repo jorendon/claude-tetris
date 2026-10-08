@@ -78,7 +78,7 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>C</kbd> reservar</li>
             <li><kbd>E</kbd> habilidad</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -91,6 +91,35 @@
         <div class="overlay-actions">
           <button id="restart-btn">Reiniciar</button>
           <button id="change-mode-btn">Elegir desafío</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box pause-box" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+        <p id="pause-title" class="pause-title">PAUSA</p>
+        <div class="pause-actions">
+          <button class="pause-btn" id="pause-resume-btn">Reanudar</button>
+          <button class="pause-btn" id="pause-restart-btn">Reiniciar</button>
+          <button class="pause-btn" id="pause-controls-btn" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+        </div>
+        <ul id="pause-controls" class="pause-controls hidden">
+          <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+          <li><kbd>↑</kbd><kbd>X</kbd> rotar</li>
+          <li><kbd>↓</kbd> bajar</li>
+          <li><kbd>Space</kbd> caída</li>
+          <li><kbd>C</kbd><kbd>Shift</kbd> reservar</li>
+          <li><kbd>E</kbd> habilidad</li>
+          <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
+        </ul>
+        <div class="pause-level">
+          <span class="label">NIVEL INICIAL</span>
+          <div class="pause-level-control">
+            <button class="pause-btn pause-level-btn" id="start-level-dec" aria-label="Bajar nivel inicial">−</button>
+            <span class="pause-level-value" id="start-level-value">1</span>
+            <button class="pause-btn pause-level-btn" id="start-level-inc" aria-label="Subir nivel inicial">+</button>
+          </div>
+          <span class="pause-level-note">Se aplica a la próxima partida (modo clásico)</span>
         </div>
       </div>
     </div>
