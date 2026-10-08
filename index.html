@@ -78,10 +78,45 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>C</kbd> reservar</li>
             <li><kbd>E</kbd> habilidad</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box pause-box">
+        <p class="pause-title">PAUSA</p>
+
+        <div class="pause-main" id="pause-main">
+          <button class="pause-item primary" id="pause-resume-btn">Reanudar</button>
+          <button class="pause-item" id="pause-restart-btn">Reiniciar</button>
+          <button class="pause-item" id="pause-controls-btn">Ver controles</button>
+          <div class="pause-level">
+            <span class="pause-level-label">Nivel inicial</span>
+            <div class="level-stepper">
+              <button class="stepper-btn" id="start-level-dec" aria-label="Bajar nivel inicial">−</button>
+              <span class="stepper-value" id="start-level-value">1</span>
+              <button class="stepper-btn" id="start-level-inc" aria-label="Subir nivel inicial">+</button>
+            </div>
+            <span class="pause-level-hint" id="start-level-hint">Se aplica al reiniciar o en la próxima partida</span>
+          </div>
+        </div>
+
+        <div class="pause-controls hidden" id="pause-controls">
+          <ul class="pause-controls-list">
+            <li><span><kbd>←</kbd><kbd>→</kbd></span> Mover</li>
+            <li><span><kbd>↑</kbd><kbd>X</kbd></span> Rotar</li>
+            <li><span><kbd>↓</kbd></span> Bajar suave</li>
+            <li><span><kbd>Space</kbd></span> Caída instantánea</li>
+            <li><span><kbd>C</kbd><kbd>Shift</kbd></span> Reservar pieza</li>
+            <li><span><kbd>E</kbd></span> Habilidad (energía llena)</li>
+            <li><span><kbd>1</kbd>–<kbd>5</kbd></span> Elegir habilidad</li>
+            <li><span><kbd>P</kbd><kbd>Esc</kbd></span> Pausa / reanudar</li>
+          </ul>
+          <button class="pause-item" id="pause-controls-back-btn">Volver</button>
+        </div>
+      </div>
     </div>
 
     <div id="overlay" class="overlay hidden">
