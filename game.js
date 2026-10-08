@@ -19,6 +19,103 @@ const COLORS = [
 
 const GARBAGE_COLOR = 9;
 
+function shade(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = v => Math.max(0, Math.min(255, Math.round(amount >= 0 ? v + (255 - v) * amount : v * (1 + amount))));
+  const r = ch(n >> 16), g = ch((n >> 8) & 255), b = ch(n & 255);
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+function roundedRectPath(context, x, y, w, h, r) {
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.lineTo(x + w - r, y);
+  context.quadraticCurveTo(x + w, y, x + w, y + r);
+  context.lineTo(x + w, y + h - r);
+  context.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  context.lineTo(x + r, y + h);
+  context.quadraticCurveTo(x, y + h, x, y + h - r);
+  context.lineTo(x, y + r);
+  context.quadraticCurveTo(x, y, x + r, y);
+  context.closePath();
+}
+
+const SKINS = {
+  retro: {
+    name: 'Retro',
+    colors: COLORS,
+    drawCell(context, px, py, size, color) {
+      context.fillStyle = color;
+      context.fillRect(px + 1, py + 1, size - 2, size - 2);
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(px + 1, py + 1, size - 2, 4);
+    },
+  },
+  neon: {
+    name: 'Neon',
+    colors: [null, '#00f0ff', '#fff200', '#d000ff', '#39ff14', '#ff073a', '#1f6bff', '#ff8c00', '#e0e0ff', '#6a6a8a'],
+    gridColor: '#0d0d1a',
+    drawCell(context, px, py, size, color) {
+      context.save();
+      context.shadowColor = color;
+      context.shadowBlur = size * 0.6;
+      context.fillStyle = shade(color, -0.75);
+      context.fillRect(px + 3, py + 3, size - 6, size - 6);
+      context.strokeStyle = color;
+      context.lineWidth = 2;
+      context.strokeRect(px + 3, py + 3, size - 6, size - 6);
+      context.shadowBlur = size * 0.25;
+      context.fillStyle = shade(color, 0.6);
+      context.fillRect(px + size / 2 - 2, py + size / 2 - 2, 4, 4);
+      context.restore();
+    },
+  },
+  pastel: {
+    name: 'Pastel',
+    colors: [null, '#a8e6ef', '#fff1a8', '#d7b8f3', '#b8e6c1', '#f7b2b7', '#b3cdfa', '#ffd1a3', '#d5dde3', '#b5b5be'],
+    drawCell(context, px, py, size, color) {
+      const r = size * 0.28;
+      roundedRectPath(context, px + 2, py + 2, size - 4, size - 4, r);
+      context.fillStyle = color;
+      context.fill();
+      context.strokeStyle = shade(color, -0.15);
+      context.lineWidth = 1;
+      context.stroke();
+      roundedRectPath(context, px + 5, py + 4, size - 10, size * 0.3, r * 0.6);
+      context.fillStyle = 'rgba(255,255,255,0.45)';
+      context.fill();
+    },
+  },
+  pixel: {
+    name: 'Pixel art',
+    colors: [null, '#3cbcfc', '#f8d878', '#b853f8', '#58d854', '#f83800', '#0078f8', '#fca044', '#bcbcbc', '#7c7c7c'],
+    drawCell(context, px, py, size, color) {
+      const p = Math.max(2, Math.floor(size / 8));
+      const n = Math.floor(size / p);
+      context.fillStyle = color;
+      context.fillRect(px, py, size, size);
+      context.fillStyle = shade(color, 0.45);
+      context.fillRect(px, py, size, p);
+      context.fillRect(px, py, p, size);
+      context.fillStyle = shade(color, -0.45);
+      context.fillRect(px, py + size - p, size, p);
+      context.fillRect(px + size - p, py, p, size);
+      // textura: patrón de tramado sobre el bloque
+      context.fillStyle = shade(color, -0.18);
+      for (let i = 2; i < n - 2; i++)
+        for (let j = 2; j < n - 2; j++)
+          if ((i + j) % 3 === 0) context.fillRect(px + i * p, py + j * p, p, p);
+      context.fillStyle = 'rgba(255,255,255,0.85)';
+      context.fillRect(px + p, py + p, p, p);
+      context.fillRect(px + 2 * p, py + p, p, p);
+      context.fillRect(px + p, py + 2 * p, p, p);
+      context.fillStyle = '#000000';
+      context.fillRect(px, py, size, 1);
+      context.fillRect(px, py, 1, size);
+    },
+  },
+};
+
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -103,6 +200,7 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const changeModeBtn = document.getElementById('change-mode-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 const challengeSelect = document.getElementById('challenge-select');
 const challengeListEl = document.getElementById('challenge-list');
 const challengeHud = document.getElementById('challenge-hud');
@@ -121,15 +219,55 @@ let audioCtx;
 let activeChallenge, challengeDone, challengeTimeLeft, challengeElapsed, challengeGarbageAccum;
 let queue, energy, abilityMenuOpen, lastLock, previewUntil, slowUntil;
 let gridColor = '#22222e';
+let skin = SKINS.retro;
 
 const EFFECT_DURATION = 1000;
 
 const THEME_KEY = 'tetris-theme';
+const SKIN_KEY = 'tetris-skin';
 
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
   themeToggle.checked = theme === 'light';
-  gridColor = getComputedStyle(document.body).getPropertyValue('--grid-line-color').trim();
+  refreshGridColor();
+  redrawAll();
+}
+
+function refreshGridColor() {
+  gridColor = skin.gridColor || getComputedStyle(document.body).getPropertyValue('--grid-line-color').trim();
+}
+
+function applySkin(key) {
+  const id = SKINS[key] ? key : 'retro';
+  skin = SKINS[id];
+  Object.keys(SKINS).forEach(k => document.body.classList.toggle(`skin-${k}`, k === id));
+  skinSelect.value = id;
+  refreshGridColor();
+  redrawAll();
+}
+
+function initSkin() {
+  Object.entries(SKINS).forEach(([key, s]) => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = s.name;
+    skinSelect.appendChild(opt);
+  });
+  applySkin(localStorage.getItem(SKIN_KEY));
+}
+
+skinSelect.addEventListener('change', () => {
+  localStorage.setItem(SKIN_KEY, skinSelect.value);
+  applySkin(skinSelect.value);
+  skinSelect.blur();
+});
+
+function redrawAll() {
+  if (!current) return;
+  draw();
+  drawNext();
+  drawHold();
+  updateExtendedPreviewUI();
 }
 
 function initTheme() {
@@ -449,7 +587,7 @@ function applyLightning() {
 }
 
 function applyDye() {
-  const counts = new Array(COLORS.length).fill(0);
+  const counts = new Array(skin.colors.length).fill(0);
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
       if (board[r][c]) counts[board[r][c]]++;
@@ -634,13 +772,12 @@ function playEnergyFullSound() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  drawCell(context, x, y, skin.colors[colorIndex], size, alpha);
+}
+
+function drawCell(context, x, y, color, size, alpha) {
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  skin.drawCell(context, x * size, y * size, size, color);
   context.globalAlpha = 1;
 }
 
@@ -650,12 +787,7 @@ function drawPieceCells(context, piece, x, y, size, alpha) {
     for (let c = 0; c < piece.shape[r].length; c++) {
       if (!piece.shape[r][c]) continue;
       if (powerUp) {
-        context.globalAlpha = alpha ?? 1;
-        context.fillStyle = powerUp.color;
-        context.fillRect((x + c) * size + 1, (y + r) * size + 1, size - 2, size - 2);
-        context.fillStyle = 'rgba(255,255,255,0.12)';
-        context.fillRect((x + c) * size + 1, (y + r) * size + 1, size - 2, 4);
-        context.globalAlpha = 1;
+        drawCell(context, x + c, y + r, powerUp.color, size, alpha);
       } else {
         drawBlock(context, x + c, y + r, piece.shape[r][c], size, alpha);
       }
@@ -783,7 +915,7 @@ function updateExtendedPreviewUI() {
   queue.slice(0, 5).forEach(p => {
     const chip = document.createElement('span');
     chip.className = 'preview-chip';
-    chip.style.background = COLORS[p.type];
+    chip.style.background = skin.colors[p.type];
     chip.textContent = p.powerUp ? p.powerUp.icon : '';
     extendedPreviewList.appendChild(chip);
   });
@@ -981,5 +1113,6 @@ document.querySelectorAll('.ability-list li').forEach(li => {
   });
 });
 
+initSkin();
 initTheme();
 renderChallengeList();

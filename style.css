@@ -140,6 +140,41 @@ body {
   transform: translateX(20px);
 }
 
+/* ---- Selector de skin ---- */
+.skin-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skin-picker .label {
+  color: var(--controls-color);
+}
+
+#skin-select {
+  background: var(--toggle-bg);
+  color: var(--text-color);
+  border: 1px solid var(--toggle-border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+body.skin-neon #board,
+body.skin-neon #next-canvas,
+body.skin-neon #hold-canvas {
+  background: #000;
+  border-color: #1f1f3a;
+}
+
+body.skin-neon #board {
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.15), 0 0 40px rgba(0, 0, 0, 0.6);
+}
+
 .game-container {
   display: flex;
   gap: 20px;
