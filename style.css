@@ -27,6 +27,8 @@
   --toggle-bg: #22223a;
   --toggle-border: #3a3a5a;
   --toggle-knob: #7aa2f7;
+  --record-accent: #ffd54f;
+  --record-row-bg: rgba(255, 238, 88, 0.16);
 }
 
 body.light {
@@ -52,6 +54,8 @@ body.light {
   --toggle-bg: #e6e6f0;
   --toggle-border: #ccccdc;
   --toggle-knob: #3a5fcd;
+  --record-accent: #a56a00;
+  --record-row-bg: rgba(255, 193, 7, 0.18);
 }
 
 body {
@@ -379,12 +383,12 @@ kbd {
 
 #overlay-score {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--overlay-score-color);
 }
 
 #restart-btn {
-  margin-top: 8px;
   background: var(--restart-bg);
   color: var(--restart-color);
   border: none;
@@ -667,6 +671,8 @@ kbd {
   font-size: 11px;
   color: var(--controls-color);
   margin-top: 4px;
+}
+
 /* ---- Tabla de récords ---- */
 .records {
   width: 260px;
@@ -735,14 +741,14 @@ kbd {
 }
 
 .records-row.highlight {
-  background: rgba(255, 238, 88, 0.16);
-  outline: 1px solid #ffee58;
+  background: var(--record-row-bg);
+  outline: 1px solid var(--record-accent);
   animation: record-pulse 0.8s ease-in-out infinite alternate;
 }
 
 .records-row.highlight .records-pos,
 .records-row.highlight .records-score {
-  color: #ffd54f;
+  color: var(--record-accent);
 }
 
 @keyframes record-pulse {
@@ -797,7 +803,7 @@ kbd {
 }
 
 .record-msg.new {
-  color: #ffd54f;
+  color: var(--record-accent);
 }
 
 .record-form {
