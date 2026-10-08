@@ -460,3 +460,65 @@ kbd {
 .ability-list li:hover {
   background: rgba(122, 162, 247, 0.22);
 }
+
+/* ---- Skins ---- */
+.skin-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skin-picker .label {
+  color: var(--controls-color);
+}
+
+#skin-select {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--value-color);
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+#skin-select:focus-visible {
+  outline: 2px solid var(--toggle-knob);
+  outline-offset: 1px;
+}
+
+body.skin-neon,
+body.light.skin-neon {
+  --board-bg: #000000;
+  --board-border: #3a1a5a;
+  --grid-line-color: #140a22;
+}
+
+body.skin-neon #board {
+  box-shadow: 0 0 30px rgba(180, 80, 255, 0.35);
+}
+
+body.skin-pastel {
+  --board-bg: #23212e;
+  --grid-line-color: #2e2b3c;
+}
+
+body.light.skin-pastel {
+  --board-bg: #fdf8ff;
+  --grid-line-color: #f0e6f5;
+}
+
+body.skin-pixel {
+  --board-bg: #14141c;
+  --grid-line-color: #1f1f2a;
+}
+
+body.light.skin-pixel {
+  --board-bg: #e8e8d8;
+  --grid-line-color: #d6d6c4;
+}
