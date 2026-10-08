@@ -460,3 +460,126 @@ kbd {
 .ability-list li:hover {
   background: rgba(122, 162, 247, 0.22);
 }
+
+/* ---- Menú de pausa ---- */
+.pause-view.hidden {
+  display: none;
+}
+
+.pause-box {
+  min-width: 260px;
+}
+
+.pause-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--title-color);
+}
+
+.pause-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.pause-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--kbd-bg);
+  color: var(--text-color);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.pause-item:focus {
+  outline: none;
+}
+
+.pause-item.selected {
+  border-color: var(--restart-bg);
+  background: var(--restart-bg);
+  color: var(--restart-color);
+}
+
+.pause-level {
+  justify-content: space-between;
+  cursor: default;
+}
+
+.level-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-btn {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.level-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.level-value {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 18px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.pause-hint {
+  font-size: 11px;
+  color: var(--controls-color);
+}
+
+.pause-controls-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  margin-bottom: 6px;
+}
+
+.pause-controls-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-color);
+}
+
+.pause-controls-list li > span:first-child {
+  display: inline-flex;
+  gap: 3px;
+  min-width: 96px;
+  justify-content: flex-end;
+  color: var(--controls-color);
+}
+
+.pause-nav-hint {
+  font-size: 11px;
+  color: var(--controls-color);
+  margin-top: 4px;
+}
