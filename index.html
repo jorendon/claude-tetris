@@ -123,6 +123,16 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="overlay-records" class="records hidden">
+          <div id="record-entry" class="record-entry hidden">
+            <p class="record-entry-title" id="record-entry-title"></p>
+            <form id="record-form" class="record-form">
+              <input id="record-name" type="text" maxlength="12" placeholder="Tu nombre" autocomplete="off" spellcheck="false" />
+              <button type="submit">Guardar</button>
+            </form>
+          </div>
+          <div class="records-board" data-records></div>
+        </div>
         <div class="overlay-actions">
           <button id="restart-btn">Reiniciar</button>
           <button id="change-mode-btn">Elegir desafío</button>
@@ -133,7 +143,12 @@
     <div id="challenge-select" class="overlay">
       <div class="overlay-box challenge-select-box">
         <p class="challenge-select-title">MODO DESAFÍO</p>
-        <div class="challenge-list" id="challenge-list"></div>
+        <div class="start-layout">
+          <div class="challenge-list" id="challenge-list"></div>
+          <div class="records records-start">
+            <div class="records-board" data-records></div>
+          </div>
+        </div>
       </div>
     </div>
 

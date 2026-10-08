@@ -27,6 +27,8 @@
   --toggle-bg: #22223a;
   --toggle-border: #3a3a5a;
   --toggle-knob: #7aa2f7;
+  --record-highlight-bg: rgba(255, 238, 88, 0.16);
+  --record-highlight-color: #ffee58;
 }
 
 body.light {
@@ -52,6 +54,8 @@ body.light {
   --toggle-bg: #e6e6f0;
   --toggle-border: #ccccdc;
   --toggle-knob: #3a5fcd;
+  --record-highlight-bg: rgba(255, 179, 0, 0.18);
+  --record-highlight-color: #b26a00;
 }
 
 body {
@@ -371,8 +375,17 @@ kbd {
 
 /* ---- Selección de desafío ---- */
 .challenge-select-box {
-  max-width: 380px;
   padding: 12px;
+}
+
+.start-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.start-layout .challenge-list {
+  width: 340px;
 }
 
 .challenge-select-title {
@@ -598,4 +611,167 @@ kbd {
   gap: 3px;
   min-width: 92px;
   color: var(--controls-color);
+}
+
+/* ---- Tabla de récords ---- */
+.records {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.records.hidden,
+.record-entry.hidden {
+  display: none;
+}
+
+.records-start {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.records-board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.records-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.records-reset {
+  background: transparent;
+  color: var(--controls-color);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.records-reset:hover {
+  color: var(--overlay-title-color);
+  border-color: var(--overlay-title-color);
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: var(--text-color);
+}
+
+.records-table th {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--label-color);
+  font-weight: 600;
+  padding: 2px 4px;
+  text-align: right;
+}
+
+.records-table td {
+  padding: 4px;
+  text-align: right;
+  border-top: 1px solid var(--kbd-border);
+}
+
+.records-table th:nth-child(2),
+.records-table td:nth-child(2) {
+  text-align: left;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-table th:first-child,
+.records-table td:first-child {
+  text-align: center;
+  width: 20px;
+  color: var(--label-color);
+}
+
+.records-table tr.empty td {
+  color: var(--label-color);
+}
+
+.records-table tr.highlight td {
+  background: var(--record-highlight-bg);
+  color: var(--record-highlight-color);
+  font-weight: 700;
+}
+
+.records-bests {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--controls-color);
+}
+
+.records-best.new {
+  color: var(--record-highlight-color);
+  font-weight: 700;
+}
+
+.record-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.record-entry-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--record-highlight-color);
+  animation: energy-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.record-form {
+  display: flex;
+  gap: 6px;
+}
+
+.record-form input {
+  width: 160px;
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text-color);
+  user-select: text;
+}
+
+.record-form input:focus {
+  outline: none;
+  border-color: var(--restart-bg);
+}
+
+.record-form button {
+  background: var(--restart-bg);
+  color: var(--restart-color);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.record-form button:hover {
+  background: var(--restart-hover);
 }

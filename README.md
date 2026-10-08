@@ -43,6 +43,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Menú de pausa** (`P` / `Esc`): reanudar, reiniciar sin recargar, ver controles y elegir el nivel inicial de la próxima partida. Los inputs del juego quedan bloqueados mientras está abierto.
 - **Game Over** con opción de reinicio.
+- **Tabla de récords local** (`localStorage`): top 5 con nombre del jugador, mejor combo y líneas máximas; visible en la pantalla de inicio y al terminar la partida, con botón para resetear.
 
 ---
 
@@ -118,6 +119,7 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
 - **Nivel y velocidad**: la partida arranca en el nivel inicial elegido en el menú de pausa (guardado en `localStorage`; el desafío *Rotación inversa* siempre empieza en 1) y sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
+- **Récords** (`registerGameResult`, `commitPendingRecord`): al terminar una partida se actualizan el mejor combo y las líneas máximas; si la puntuación entra en el top 5 se pide el nombre y la fila se resalta. Se guarda en la clave `tetris-records` de `localStorage`.
 
 ### Flujo del juego
 
