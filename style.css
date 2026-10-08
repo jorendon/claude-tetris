@@ -91,6 +91,28 @@ body {
   text-shadow: 0 0 20px var(--title-shadow);
 }
 
+.game-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  box-shadow: 0 0 16px var(--title-shadow);
+}
+
+.title-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.game-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--controls-color);
+}
+
 /* ---- Theme toggle ---- */
 .theme-toggle {
   position: absolute;
