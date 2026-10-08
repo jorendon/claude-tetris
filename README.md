@@ -44,6 +44,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Menú de pausa** (`P` / `Esc`) con opciones para reanudar, reiniciar, ver los controles y elegir el nivel inicial de la próxima partida (guardado en `localStorage`).
 - **Game Over** con opción de reinicio.
 - **Skins visuales** (Retro, Neón, Pastel y Pixel art) seleccionables desde el selector «SKIN»; la preferencia se guarda en `localStorage`.
+- **Tabla de récords local** (`localStorage`): top 5 con nombre del jugador, mejor combo y máximo de líneas, visible en la pantalla de inicio y al terminar la partida (solo modo clásico).
 
 ---
 
