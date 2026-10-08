@@ -140,6 +140,78 @@ body {
   transform: translateX(20px);
 }
 
+/* ---- Selector de skin ---- */
+.skin-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skin-picker .label {
+  color: var(--controls-color);
+}
+
+#skin-select {
+  background: var(--toggle-bg);
+  color: var(--text-color);
+  border: 1px solid var(--toggle-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+#skin-select:focus-visible {
+  outline: 2px solid var(--toggle-knob);
+  outline-offset: 1px;
+}
+
+/* Ajustes de página por skin (el fondo de los canvas lo pinta game.js) */
+body.skin-neon #board,
+body.skin-neon #next-canvas,
+body.skin-neon #hold-canvas {
+  background: #000;
+  border-color: #00f0ff;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.45), inset 0 0 12px rgba(0, 240, 255, 0.15);
+}
+
+body.skin-neon .game-title {
+  color: #00f0ff;
+  text-shadow: 0 0 8px #00f0ff, 0 0 24px #d500f9;
+}
+
+body.skin-pastel #board,
+body.skin-pastel #next-canvas,
+body.skin-pastel #hold-canvas {
+  background: #2e2a3e;
+  border-color: #b8a9d9;
+  border-radius: 12px;
+}
+
+body.skin-pastel .game-title {
+  color: #f7b2b7;
+  text-shadow: 0 0 16px rgba(215, 184, 243, 0.6);
+}
+
+body.skin-pixel #board,
+body.skin-pixel #next-canvas,
+body.skin-pixel #hold-canvas {
+  background: #141428;
+  border: 3px solid #bcbcbc;
+  border-radius: 0;
+  image-rendering: pixelated;
+}
+
+body.skin-pixel .game-title {
+  font-family: 'Courier New', Courier, monospace;
+  color: #f8b800;
+  text-shadow: 3px 3px 0 #f83800;
+}
+
 .game-container {
   display: flex;
   gap: 20px;
