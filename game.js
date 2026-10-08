@@ -112,11 +112,16 @@ const energyFillEl = document.getElementById('energy-fill');
 const abilityOverlay = document.getElementById('ability-overlay');
 const extendedPreviewSection = document.getElementById('extended-preview-section');
 const extendedPreviewList = document.getElementById('extended-preview-list');
+const recordEntryEl = document.getElementById('record-entry');
+const recordMsgEl = document.getElementById('record-msg');
+const recordForm = document.getElementById('record-form');
+const recordNameInput = document.getElementById('record-name');
+const overlayRecordsEl = document.getElementById('overlay-records');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let pendingPowerUp, freezeUntil;
 let hold, holdLocked;
-let combo, b2bActive, lastMoveWasRotation, effects;
+let combo, maxCombo, b2bActive, lastMoveWasRotation, effects;
 let audioCtx;
 let activeChallenge, challengeDone, challengeTimeLeft, challengeElapsed, challengeGarbageAccum;
 let queue, energy, abilityMenuOpen, lastLock, previewUntil, slowUntil;
@@ -125,6 +130,25 @@ let gridColor = '#22222e';
 const EFFECT_DURATION = 1000;
 
 const THEME_KEY = 'tetris-theme';
+const RECORDS_KEY = 'tetris-records';
+const LAST_NAME_KEY = 'tetris-last-name';
+const MAX_RECORDS = 5;
+const NAME_MAX_LENGTH = 12;
+
+let records, pendingRecord, highlightRecord;
+
+// Acceso a localStorage protegido: si no está disponible el juego sigue funcionando.
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* sin persistencia */ }
+}
+
+function storageRemove(key) {
+  try { localStorage.removeItem(key); } catch (e) { /* sin persistencia */ }
+}
 
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
@@ -133,13 +157,13 @@ function applyTheme(theme) {
 }
 
 function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
+  const saved = storageGet(THEME_KEY);
   applyTheme(saved === 'light' ? 'light' : 'dark');
 }
 
 themeToggle.addEventListener('change', () => {
   const theme = themeToggle.checked ? 'light' : 'dark';
-  localStorage.setItem(THEME_KEY, theme);
+  storageSet(THEME_KEY, theme);
   applyTheme(theme);
 });
 
@@ -246,6 +270,7 @@ function clearLines(tSpin) {
 
   if (cleared) {
     combo++;
+    if (combo > maxCombo) maxCombo = combo;
     const prevLines = lines;
     lines += cleared;
     let lineScore = (LINE_SCORES[cleared] || 0) * level * combo;
@@ -610,6 +635,7 @@ function completeChallenge(success) {
   overlayTitle.textContent = success ? '¡DESAFÍO SUPERADO!' : 'DESAFÍO FALLIDO';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()} · ${challengeProgressText()}`;
   overlay.classList.remove('hidden');
+  showGameEndRecords();
 }
 
 function playTone(freq, duration, type, delay) {
@@ -821,6 +847,7 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  showGameEndRecords();
 }
 
 function togglePause() {
@@ -833,6 +860,7 @@ function togglePause() {
     cancelAnimationFrame(animId);
     overlayTitle.textContent = 'PAUSA';
     overlayScore.textContent = '';
+    hideOverlayRecords();
     overlay.classList.remove('hidden');
   }
 }
@@ -861,6 +889,9 @@ function loop(ts) {
 }
 
 function init(challenge) {
+  finalizePendingRecord();
+  highlightRecord = null;
+  hideOverlayRecords();
   activeChallenge = challenge || null;
   challengeDone = false;
   challengeTimeLeft = activeChallenge && activeChallenge.timeLimit ? activeChallenge.timeLimit : 0;
@@ -880,6 +911,7 @@ function init(challenge) {
   hold = null;
   holdLocked = false;
   combo = 0;
+  maxCombo = 0;
   b2bActive = false;
   lastMoveWasRotation = false;
   effects = [];
@@ -899,6 +931,179 @@ function init(challenge) {
   extendedPreviewSection.hidden = true;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
+}
+
+// ---- Tabla de récords ----
+
+function emptyRecords() {
+  return { top: [], bestCombo: 0, maxLines: 0 };
+}
+
+function sanitizeName(name) {
+  const clean = String(name || '').trim().slice(0, NAME_MAX_LENGTH);
+  return clean || 'Anónimo';
+}
+
+function loadRecords() {
+  records = emptyRecords();
+  const raw = storageGet(RECORDS_KEY);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.top)) {
+      records.top = data.top
+        .filter(r => r && Number.isFinite(r.score))
+        .map(r => ({
+          name: sanitizeName(r.name),
+          score: r.score,
+          lines: Number(r.lines) || 0,
+          level: Number(r.level) || 1,
+          mode: String(r.mode || ''),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_RECORDS);
+    }
+    records.bestCombo = Number(data.bestCombo) || 0;
+    records.maxLines = Number(data.maxLines) || 0;
+  } catch (e) {
+    records = emptyRecords();
+  }
+}
+
+function saveRecords() {
+  storageSet(RECORDS_KEY, JSON.stringify(records));
+}
+
+// Posición (0-based) que ocuparía una puntuación en el top, o -1 si no entra.
+function recordRank(value) {
+  if (value <= 0) return -1;
+  const idx = records.top.findIndex(r => value > r.score);
+  if (idx !== -1) return idx;
+  return records.top.length < MAX_RECORDS ? records.top.length : -1;
+}
+
+function renderRecords() {
+  const rows = records.top.slice();
+  if (pendingRecord) {
+    const rank = recordRank(pendingRecord.score);
+    if (rank !== -1) rows.splice(rank, 0, pendingRecord);
+  }
+  const visible = rows.slice(0, MAX_RECORDS);
+  const comboText = records.bestCombo >= 2 ? `x${records.bestCombo}` : '—';
+  document.querySelectorAll('.records').forEach(container => {
+    const list = container.querySelector('.records-list');
+    list.innerHTML = '';
+    if (!visible.length) {
+      const empty = document.createElement('li');
+      empty.className = 'records-empty';
+      empty.textContent = 'Sin récords todavía';
+      list.appendChild(empty);
+    }
+    visible.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.className = 'records-row';
+      if (r === pendingRecord || r === highlightRecord) li.classList.add('highlight');
+      const pos = document.createElement('span');
+      pos.className = 'records-pos';
+      pos.textContent = `${i + 1}.`;
+      const name = document.createElement('span');
+      name.className = 'records-name';
+      name.textContent = r === pendingRecord ? 'TÚ' : r.name;
+      const pts = document.createElement('span');
+      pts.className = 'records-score';
+      pts.textContent = r.score.toLocaleString();
+      const detail = document.createElement('span');
+      detail.className = 'records-detail';
+      detail.textContent = `${r.lines} líneas · Nv ${r.level}${r.mode ? ' · ' + r.mode : ''}`;
+      li.append(pos, name, pts, detail);
+      list.appendChild(li);
+    });
+    container.querySelector('.records-stats').textContent =
+      `Mejor combo: ${comboText} · Líneas máx: ${records.maxLines}`;
+  });
+}
+
+function showGameEndRecords() {
+  const msgs = [];
+  if (maxCombo > records.bestCombo) {
+    if (maxCombo >= 2 && records.bestCombo >= 2) msgs.push(`¡Nuevo mejor combo: x${maxCombo}!`);
+    records.bestCombo = maxCombo;
+  }
+  if (lines > records.maxLines) {
+    if (records.maxLines > 0) msgs.push(`¡Nuevo récord de líneas: ${lines}!`);
+    records.maxLines = lines;
+  }
+  saveRecords();
+
+  highlightRecord = null;
+  const rank = recordRank(score);
+  if (rank !== -1) {
+    pendingRecord = {
+      score, lines, level,
+      mode: activeChallenge ? activeChallenge.name : 'Clásico',
+    };
+    msgs.unshift(`¡NUEVO RÉCORD! Puesto #${rank + 1}`);
+    recordMsgEl.classList.add('new');
+    recordForm.classList.remove('hidden');
+    recordNameInput.value = storageGet(LAST_NAME_KEY) || '';
+  } else {
+    pendingRecord = null;
+    msgs.unshift('No entraste en el top 5');
+    recordMsgEl.classList.toggle('new', msgs.length > 1);
+    recordForm.classList.add('hidden');
+  }
+  recordMsgEl.textContent = msgs.join('\n');
+  recordEntryEl.classList.remove('hidden');
+  overlayRecordsEl.classList.remove('hidden');
+  renderRecords();
+  if (pendingRecord) {
+    recordNameInput.focus();
+    recordNameInput.select();
+  }
+}
+
+function commitPendingRecord(rawName) {
+  if (!pendingRecord) return;
+  const rank = recordRank(pendingRecord.score);
+  const entry = {
+    name: sanitizeName(rawName),
+    score: pendingRecord.score,
+    lines: pendingRecord.lines,
+    level: pendingRecord.level,
+    mode: pendingRecord.mode,
+  };
+  pendingRecord = null;
+  if (rank === -1) return;
+  records.top.splice(rank, 0, entry);
+  records.top = records.top.slice(0, MAX_RECORDS);
+  saveRecords();
+  storageSet(LAST_NAME_KEY, entry.name);
+  highlightRecord = entry;
+  recordForm.classList.add('hidden');
+  recordMsgEl.textContent = `Récord guardado en el puesto #${rank + 1}`;
+  recordNameInput.blur();
+  renderRecords();
+}
+
+// Si el jugador sale sin pulsar Guardar, se guarda con lo escrito (o "Anónimo").
+function finalizePendingRecord() {
+  if (pendingRecord) commitPendingRecord(recordNameInput.value);
+}
+
+function hideOverlayRecords() {
+  recordEntryEl.classList.add('hidden');
+  overlayRecordsEl.classList.add('hidden');
+}
+
+function resetRecords() {
+  if (!confirm('¿Seguro que quieres borrar todos los récords? Esta acción no se puede deshacer.')) return;
+  records = emptyRecords();
+  storageRemove(RECORDS_KEY);
+  highlightRecord = null;
+  if (pendingRecord) {
+    recordMsgEl.textContent = `¡NUEVO RÉCORD! Puesto #${recordRank(pendingRecord.score) + 1}`;
+  }
+  renderRecords();
 }
 
 function renderChallengeList() {
@@ -922,6 +1127,8 @@ function startChallenge(challenge) {
 }
 
 document.addEventListener('keydown', e => {
+  // No disparar controles del juego mientras se escribe en un campo de texto.
+  if (e.target instanceof Element && e.target.matches('input[type="text"], textarea')) return;
   if (!current) return;
   if (abilityMenuOpen) {
     const map = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5 };
@@ -970,6 +1177,8 @@ document.addEventListener('keydown', e => {
 restartBtn.addEventListener('click', () => init(activeChallenge));
 
 changeModeBtn.addEventListener('click', () => {
+  finalizePendingRecord();
+  renderRecords();
   cancelAnimationFrame(animId);
   overlay.classList.add('hidden');
   challengeSelect.classList.remove('hidden');
@@ -981,5 +1190,16 @@ document.querySelectorAll('.ability-list li').forEach(li => {
   });
 });
 
+recordForm.addEventListener('submit', e => {
+  e.preventDefault();
+  commitPendingRecord(recordNameInput.value);
+});
+
+document.querySelectorAll('.records-reset-btn').forEach(btn => {
+  btn.addEventListener('click', resetRecords);
+});
+
 initTheme();
+loadRecords();
+renderRecords();
 renderChallengeList();

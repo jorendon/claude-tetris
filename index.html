@@ -88,6 +88,19 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="record-entry" class="record-entry hidden">
+          <p id="record-msg" class="record-msg"></p>
+          <form id="record-form" class="record-form hidden" autocomplete="off">
+            <input type="text" id="record-name" maxlength="12" placeholder="Tu nombre" spellcheck="false" />
+            <button type="submit" id="record-save-btn">Guardar</button>
+          </form>
+        </div>
+        <div class="records hidden" id="overlay-records">
+          <p class="records-title">RÉCORDS</p>
+          <ol class="records-list"></ol>
+          <p class="records-stats"></p>
+          <button type="button" class="records-reset-btn">Borrar récords</button>
+        </div>
         <div class="overlay-actions">
           <button id="restart-btn">Reiniciar</button>
           <button id="change-mode-btn">Elegir desafío</button>
@@ -97,8 +110,18 @@
 
     <div id="challenge-select" class="overlay">
       <div class="overlay-box challenge-select-box">
-        <p class="challenge-select-title">MODO DESAFÍO</p>
-        <div class="challenge-list" id="challenge-list"></div>
+        <div class="start-layout">
+          <div class="start-modes">
+            <p class="challenge-select-title">MODO DESAFÍO</p>
+            <div class="challenge-list" id="challenge-list"></div>
+          </div>
+          <div class="records" id="start-records">
+            <p class="records-title">RÉCORDS</p>
+            <ol class="records-list"></ol>
+            <p class="records-stats"></p>
+            <button type="button" class="records-reset-btn">Borrar récords</button>
+          </div>
+        </div>
       </div>
     </div>
 
