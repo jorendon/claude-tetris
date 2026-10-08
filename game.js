@@ -290,6 +290,126 @@ document.addEventListener('keyup', e => {
 });
 window.addEventListener('blur', () => { keysDown.clear(); });
 
+const SKIN_KEY = 'tetris-skin';
+const skinSelect = document.getElementById('skin-select');
+
+function roundRectPath(context, x, y, w, h, r) {
+  context.beginPath();
+  if (context.roundRect) {
+    context.roundRect(x, y, w, h, r);
+    return;
+  }
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+const SKINS = {
+  retro: {
+    name: 'Retro',
+    colors: COLORS,
+    grid: null,
+    drawCell(context, px, py, size, color) {
+      context.fillStyle = color;
+      context.fillRect(px + 1, py + 1, size - 2, size - 2);
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(px + 1, py + 1, size - 2, 4);
+    },
+  },
+  neon: {
+    name: 'Neón',
+    colors: [null, '#00f0ff', '#fff200', '#d400ff', '#39ff14', '#ff073a', '#2979ff', '#ff8c00', '#cfd8dc', '#5a5a6e'],
+    grid: null,
+    drawCell(context, px, py, size, color) {
+      context.shadowColor = color;
+      context.shadowBlur = size * 0.5;
+      context.strokeStyle = color;
+      context.lineWidth = 2;
+      context.strokeRect(px + 3, py + 3, size - 6, size - 6);
+      context.shadowBlur = 0;
+      const alpha = context.globalAlpha;
+      context.fillStyle = color;
+      context.globalAlpha = alpha * 0.35;
+      context.fillRect(px + 5, py + 5, size - 10, size - 10);
+      context.globalAlpha = alpha;
+    },
+  },
+  pastel: {
+    name: 'Pastel',
+    colors: [null, '#a8e6ef', '#fff1a8', '#dcc6ec', '#bfe6c4', '#f5b7b1', '#b3cdf7', '#ffd8a8', '#d5dde2', '#b5b5bd'],
+    grid: null,
+    drawCell(context, px, py, size, color) {
+      const r = Math.max(2, size * 0.22);
+      context.fillStyle = color;
+      roundRectPath(context, px + 1.5, py + 1.5, size - 3, size - 3, r);
+      context.fill();
+      context.fillStyle = 'rgba(255,255,255,0.35)';
+      roundRectPath(context, px + 4, py + 4, size - 8, (size - 8) * 0.4, r * 0.6);
+      context.fill();
+    },
+  },
+  pixel: {
+    name: 'Pixel art',
+    colors: [null, '#3fc1d9', '#f2c230', '#9b4fc9', '#4caf50', '#e04040', '#3d6fe0', '#f08a24', '#9aa8b0', '#5e5e5e'],
+    grid: null,
+    drawCell(context, px, py, size, color) {
+      const p = Math.max(1, Math.floor(size / 8));
+      const n = Math.floor(size / p);
+      context.fillStyle = color;
+      context.fillRect(px, py, size, size);
+      context.fillStyle = 'rgba(255,255,255,0.4)';
+      context.fillRect(px, py, size, p);
+      context.fillRect(px, py + p, p, size - p);
+      context.fillStyle = 'rgba(0,0,0,0.4)';
+      context.fillRect(px + p, py + size - p, size - p, p);
+      context.fillRect(px + size - p, py + p, p, size - 2 * p);
+      context.fillStyle = 'rgba(0,0,0,0.12)';
+      for (let i = 2; i < n - 2; i++)
+        for (let j = 2; j < n - 2; j++)
+          if ((i + j) % 3 === 0) context.fillRect(px + i * p, py + j * p, p, p);
+      context.fillStyle = 'rgba(255,255,255,0.75)';
+      context.fillRect(px + p * 2, py + p * 2, p * 2, p);
+      context.fillRect(px + p * 2, py + p * 3, p, p);
+    },
+  },
+};
+
+let skin = SKINS.retro;
+
+function applySkin(name) {
+  if (!SKINS[name]) name = 'retro';
+  skin = SKINS[name];
+  Object.keys(SKINS).forEach(k => document.body.classList.toggle(`skin-${k}`, k === name && k !== 'retro'));
+  skinSelect.value = name;
+  gridColor = getComputedStyle(document.body).getPropertyValue('--grid-line-color').trim();
+  redrawBoards();
+}
+
+function redrawBoards() {
+  if (!current) return;
+  draw();
+  drawNext();
+  drawHold();
+}
+
+function initSkin() {
+  let saved = null;
+  try { saved = localStorage.getItem(SKIN_KEY); } catch (e) { /* sin acceso a storage */ }
+  applySkin(saved);
+}
+
+skinSelect.addEventListener('change', () => {
+  const name = SKINS[skinSelect.value] ? skinSelect.value : 'retro';
+  try { localStorage.setItem(SKIN_KEY, name); } catch (e) { /* sin acceso a storage */ }
+  applySkin(name);
+  skinSelect.blur();
+});
+
+themeToggle.addEventListener('change', redrawBoards);
+
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
@@ -781,13 +901,8 @@ function playEnergyFullSound() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  skin.drawCell(context, x * size, y * size, size, skin.colors[colorIndex]);
   context.globalAlpha = 1;
 }
 
@@ -798,10 +913,7 @@ function drawPieceCells(context, piece, x, y, size, alpha) {
       if (!piece.shape[r][c]) continue;
       if (powerUp) {
         context.globalAlpha = alpha ?? 1;
-        context.fillStyle = powerUp.color;
-        context.fillRect((x + c) * size + 1, (y + r) * size + 1, size - 2, size - 2);
-        context.fillStyle = 'rgba(255,255,255,0.12)';
-        context.fillRect((x + c) * size + 1, (y + r) * size + 1, size - 2, 4);
+        skin.drawCell(context, (x + c) * size, (y + r) * size, size, powerUp.color);
         context.globalAlpha = 1;
       } else {
         drawBlock(context, x + c, y + r, piece.shape[r][c], size, alpha);
@@ -819,7 +931,7 @@ function drawPieceCells(context, piece, x, y, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = gridColor;
+  ctx.strokeStyle = skin.grid || gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -930,7 +1042,7 @@ function updateExtendedPreviewUI() {
   queue.slice(0, 5).forEach(p => {
     const chip = document.createElement('span');
     chip.className = 'preview-chip';
-    chip.style.background = COLORS[p.type];
+    chip.style.background = skin.colors[p.type];
     chip.textContent = p.powerUp ? p.powerUp.icon : '';
     extendedPreviewList.appendChild(chip);
   });
@@ -1066,6 +1178,11 @@ function startChallenge(challenge) {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.target === skinSelect) {
+    if ((!current || paused || gameOver) && e.code !== 'KeyP') return;
+    e.preventDefault();
+    skinSelect.blur();
+  } else if (e.target.matches && e.target.matches('select, input:not([type="checkbox"])')) return;
   if (!current) return;
   if (abilityMenuOpen) {
     const map = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5 };
@@ -1132,4 +1249,5 @@ document.querySelectorAll('.ability-list li').forEach(li => {
 
 initTheme();
 setStartLevel(loadStartLevel());
+initSkin();
 renderChallengeList();
