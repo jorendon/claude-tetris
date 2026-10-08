@@ -78,7 +78,7 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>C</kbd> reservar</li>
             <li><kbd>E</kbd> habilidad</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -92,6 +92,43 @@
           <button id="restart-btn">Reiniciar</button>
           <button id="change-mode-btn">Elegir desafío</button>
         </div>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box pause-box">
+        <p class="pause-title">PAUSA</p>
+
+        <div class="pause-view" id="pause-main">
+          <button type="button" class="pause-item" data-action="resume">Reanudar</button>
+          <button type="button" class="pause-item" data-action="restart">Reiniciar</button>
+          <button type="button" class="pause-item" data-action="controls">Ver controles</button>
+          <div class="pause-item pause-level" data-action="level">
+            <span>Nivel inicial</span>
+            <span class="level-picker">
+              <button type="button" class="level-btn" id="start-level-down" aria-label="Bajar nivel inicial">◀</button>
+              <span class="level-value" id="start-level-value">1</span>
+              <button type="button" class="level-btn" id="start-level-up" aria-label="Subir nivel inicial">▶</button>
+            </span>
+          </div>
+          <p class="pause-hint" id="start-level-hint">Se aplica en la próxima partida</p>
+        </div>
+
+        <div class="pause-view hidden" id="pause-controls">
+          <ul class="pause-controls-list">
+            <li><span><kbd>←</kbd><kbd>→</kbd></span> mover</li>
+            <li><span><kbd>↑</kbd><kbd>X</kbd></span> rotar</li>
+            <li><span><kbd>↓</kbd></span> bajar (soft drop)</li>
+            <li><span><kbd>Space</kbd></span> caída instantánea</li>
+            <li><span><kbd>C</kbd><kbd>Shift</kbd></span> reservar pieza</li>
+            <li><span><kbd>E</kbd></span> usar habilidad (energía llena)</li>
+            <li><span><kbd>1</kbd>–<kbd>5</kbd></span> elegir habilidad</li>
+            <li><span><kbd>P</kbd><kbd>Esc</kbd></span> pausa / reanudar</li>
+          </ul>
+          <button type="button" class="pause-item" data-action="back">Volver</button>
+        </div>
+
+        <p class="pause-nav-hint"><kbd>↑</kbd><kbd>↓</kbd> navegar · <kbd>Enter</kbd> elegir · <kbd>Esc</kbd> volver</p>
       </div>
     </div>
 
