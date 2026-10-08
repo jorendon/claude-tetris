@@ -460,3 +460,126 @@ kbd {
 .ability-list li:hover {
   background: rgba(122, 162, 247, 0.22);
 }
+
+/* ---- Récords ---- */
+.records {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 240px;
+}
+
+.records[hidden],
+.records [hidden] {
+  display: none;
+}
+
+.records-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--title-color);
+  margin-top: 6px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: var(--text-color);
+}
+
+.records-table th {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--label-color);
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--kbd-border);
+}
+
+.records-table td {
+  padding: 3px 4px;
+  white-space: pre;
+}
+
+.records-table td:nth-child(2) {
+  text-align: left;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.records-table td:nth-child(3) {
+  text-align: right;
+  color: var(--value-color);
+}
+
+.record-highlight td {
+  background: var(--kbd-bg);
+  color: var(--overlay-title-color);
+  font-weight: 700;
+}
+
+.records-empty,
+.records-stats {
+  font-size: 11px;
+  color: var(--controls-color);
+}
+
+.record-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.record-new {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--overlay-title-color);
+}
+
+.record-form {
+  display: flex;
+  gap: 6px;
+}
+
+#record-name {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: 13px;
+  padding: 6px 10px;
+  width: 140px;
+}
+
+#record-name:focus {
+  outline: none;
+  border-color: var(--restart-bg);
+}
+
+#record-save-btn,
+#reset-records-btn {
+  background: transparent;
+  color: var(--restart-bg);
+  border: 1px solid var(--restart-bg);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#record-save-btn:hover,
+#reset-records-btn:hover {
+  background: var(--restart-bg);
+  color: var(--restart-color);
+}
